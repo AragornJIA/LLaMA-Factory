@@ -36,7 +36,7 @@ def create_ui(demo_mode: bool = False) -> gr.Blocks:
     engine = Engine(demo_mode=demo_mode, pure_chat=False)
 
     with gr.Blocks(title="LLaMA Board", css=CSS) as demo:
-        gr.HTML("<h1><center>专题模型训练系统</center></h1>")
+        gr.HTML("<h1 style='font-size:50px'><center>网络情报专题模型训练系统</center></h1>")
         if demo_mode:
             gr.HTML(
                 '<h3><center>Visit <a href="https://github.com/hiyouga/LLaMA-Factory" target="_blank">'

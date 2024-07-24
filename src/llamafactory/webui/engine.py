@@ -49,7 +49,7 @@ class Engine:
 
     def resume(self):
         user_config = load_config() if not self.demo_mode else {}
-        lang = user_config.get("lang", None) or "en"
+        lang = user_config.get("lang", None) or "zh"
 
         init_dict = {"top.lang": {"value": lang}, "infer.chat_box": {"visible": self.chatter.loaded}}
 

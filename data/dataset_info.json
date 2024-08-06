@@ -516,6 +516,12 @@
       "prompt": "text"
     }
   },
+  "news": {
+    "file_name": "/home/ai/projects/llm-tranining-data/news.txt",
+    "columns": {
+      "prompt": "text"
+    }
+  },
   "crime_words_pt": {
     "file_name": "crime_words.txt",
     "columns": {

@@ -524,7 +524,13 @@
     }
   },
   "news": {
-    "file_name": "/home/ai/projects/llm-tranining-data/news.txt",
+    "file_name": "/home/ai/Documents/llm/training-data/news_0726.txt",
+    "columns": {
+      "prompt": "text"
+    }
+  },
+  "news-piece": {
+    "file_name": "/home/ai/Documents/llm/training-data/news_piece.txt",
     "columns": {
       "prompt": "text"
     }

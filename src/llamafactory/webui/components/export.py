@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Dict, Generator, List, Union
 
 from transformers.trainer_utils import get_last_checkpoint
 
-from ..call_api_utils import ApiUtils, finetuning_type_map
+from ...api.task_api import TaskApi, finetuning_type_map
 from ..common import GPTQ_BITS, get_save_dir, load_config
 from ..locales import ALERTS
 from ..utils import get_cur_datetime, load_args, save_args
@@ -148,24 +148,24 @@ def save_model(
     }
 
     # 1. 根据 checkpoint 文件夹中的 llamaboard_config.yaml 中的 task_id, 如果该 task_id 对应 trainedModelName 字段为空, 说明该模型还没有被导出过, 就根据 task_id 进行更新;
-    task_info = ApiUtils.fetch_train_task_detail({"id": train_args.get("task_id")})
+    task_info = TaskApi.fetch_train_task_detail({"id": train_args.get("task_id")})
     if not task_info.get("trainedModelName"):
         logger.info("第1分支")
-        ApiUtils.update_train_task(
+        TaskApi.update_train_task(
             {"id": train_args.get("task_id"),
              "trainingStatus": train_args['train.status'],
              "trainedModelName": train_args.get("export_model_name"),
              "trainedModelPath": train_args.get("export_dir"),
              }
         )
-        trained_model_detail['model_id'] = ApiUtils.add_model(trained_model_detail)
+        trained_model_detail['model_id'] = TaskApi.add_model(trained_model_detail)
 
     # 2. 如果该模型已经被导出过, 就检查 trainedModelName 是否已经存在, 如果存在, 就更新该记录;
-    elif task_id := ApiUtils.fetch_train_task_detail({"trainedModelName": train_args.get("export_model_name")}).get(
+    elif task_id := TaskApi.fetch_train_task_detail({"trainedModelName": train_args.get("export_model_name")}).get(
         "id"):
         logger.info("第2分支")
         train_args['task_id'] = task_id
-        ApiUtils.update_train_task(
+        TaskApi.update_train_task(
             {"id": task_id,
              "name": train_args.get("train.output_dir"),
              "baseModel": train_args.get("top.model_name"),
@@ -182,9 +182,9 @@ def save_model(
         trained_model_detail['name'] = train_args.get("export_model_name")
         trained_model_detail['path'] = train_args.get("export_dir")
         trained_model_detail['create_time'] = train_args.get("export.trained_model_create_time")
-        model_id = ApiUtils.fetch_model_detail({"trainTaskId": train_args.get("task_id")}).get("id")
+        model_id = TaskApi.fetch_model_detail({"trainTaskId": train_args.get("task_id")}).get("id")
         trained_model_detail['model_id'] = model_id
-        ApiUtils.update_model({
+        TaskApi.update_model({
             "id": model_id,
             "baseModel": trained_model_detail['base_model'],
             "path": trained_model_detail['path'],
@@ -194,9 +194,9 @@ def save_model(
     # 3. 如果该模型已经被导出过, 并且 trainedModelName 还不存在, 就新增一条导出记录;
     else:
         logger.info("第3分支")
-        task_id = ApiUtils.add_train_task(train_args)
+        task_id = TaskApi.add_train_task(train_args)
         train_args['task_id'] = trained_model_detail['train_task_id'] = task_id
-        model_id = ApiUtils.add_model(trained_model_detail)
+        model_id = TaskApi.add_model(trained_model_detail)
         trained_model_detail['model_id'] = model_id
 
     save_args(os.path.join(train_args.get("export_dir"), "llamaboard_config.yaml"), train_args)
@@ -208,7 +208,7 @@ def save_model(
     quantize_model(trained_model_detail.get("name"))
     train_args['export.quantization_type'] = trained_model_detail['quantization_type'] = 2
     trained_model_detail['deploy_status'] = 2
-    ApiUtils.update_model({
+    TaskApi.update_model({
         "id": trained_model_detail.get("model_id"),
         "quantizationType": trained_model_detail['quantization_type'],
         "deployStatus": trained_model_detail['deploy_status'],
@@ -217,7 +217,7 @@ def save_model(
 
     deploy_model(train_args.get("export_model_name"), train_args.get("export_dir"))
     trained_model_detail['deploy_status'] = 3
-    ApiUtils.update_model(
+    TaskApi.update_model(
         {"id": trained_model_detail.get("model_id"), "deployStatus": trained_model_detail['deploy_status']})
 
     yield ALERTS["info_deployed"][lang]

@@ -28,7 +28,7 @@ from ..extras.logging import get_logger
 from .common import DEFAULT_CACHE_DIR, DEFAULT_CONFIG_DIR, QUANTIZATION_BITS, get_save_dir, load_config
 from .locales import ALERTS, LOCALES
 from .utils import abort_process, gen_cmd, get_eval_results, get_trainer_info, load_args, save_args, save_cmd, get_cur_datetime
-from .call_api_utils import ApiUtils
+from ..api.task_api import TaskApi
 
 if is_gradio_available():
     import gradio as gr
@@ -60,7 +60,7 @@ class Runner:
         if self.trainer is not None:
             abort_process(self.trainer.pid)
         self.train_args['train.status'] = 2
-        ApiUtils.update_train_task(
+        TaskApi.update_train_task(
             {"id": self.train_args.get("task_id"), "trainingStatus": self.train_args['train.status']})
 
     def _initialize(self, data: Dict["Component", Any], do_train: bool, from_preview: bool) -> str:
@@ -319,7 +319,7 @@ class Runner:
 
             self.train_args['train.create_time'] = get_cur_datetime()
             self.train_args['train.status'] = 1
-            task_id = ApiUtils.add_train_task(self.train_args)
+            task_id = TaskApi.add_train_task(self.train_args)
             self.train_args['task_id'] = task_id
             os.makedirs(args["output_dir"], exist_ok=True)
             save_args(os.path.join(str(args["output_dir"]), LLAMABOARD_CONFIG), self.train_args)
@@ -338,11 +338,11 @@ class Runner:
                 self.train_args['train.finish_time'] = get_cur_datetime()
                 self.train_args['train.status'] = 4
                 save_args(os.path.join(str(last_checkpoint_folder), LLAMABOARD_CONFIG), self.train_args)
-                ApiUtils.update_train_task(
+                TaskApi.update_train_task(
                     {"id": task_id, "trainingStatus": 4, "finishTime": self.train_args['train.finish_time']})
             else:
                 if self.train_args['train.status'] == 1:
-                    ApiUtils.update_train_task({"id": task_id, "trainingStatus": 3})
+                    TaskApi.update_train_task({"id": task_id, "trainingStatus": 3})
 
     def _form_config_dict(self, data: Dict["Component", Any]) -> Dict[str, Any]:
         config_dict = {}

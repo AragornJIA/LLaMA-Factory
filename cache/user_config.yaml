@@ -1,6 +1,4 @@
-base_host_url: http://120.48.168.161:8001
-base_models_dir: ../base_llm_models/
-cache_dir: null
 lang: zh
-last_model: Qwen2-1.5B
+base_host_url: http://8.152.0.253:8001
+base_models_dir: ../base_llm_models/
 trained_models_dir: ../trained_llm_models/

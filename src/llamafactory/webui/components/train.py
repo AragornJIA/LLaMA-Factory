@@ -322,7 +322,7 @@ def create_train_tab(engine: "Engine") -> Dict[str, "Component"]:
     output_elems = [output_box, progress_bar, loss_viewer]
 
     cmd_preview_btn.click(engine.runner.preview_train, input_elems, output_elems, concurrency_limit=None)
-    start_btn.click(engine.runner.run_train, input_elems, output_elems)
+    start_btn.click(engine.runner.run_train, input_elems, output_elems, api_name="start")
     stop_btn.click(engine.runner.set_abort)
     resume_btn.change(engine.runner.monitor, outputs=output_elems, concurrency_limit=None)
 
@@ -330,9 +330,9 @@ def create_train_tab(engine: "Engine") -> Dict[str, "Component"]:
     model_name: "gr.Dropdown" = engine.manager.get_elem_by_id("top.model_name")
     finetuning_type: "gr.Dropdown" = engine.manager.get_elem_by_id("top.finetuning_type")
 
-    arg_save_btn.click(engine.runner.save_args, input_elems, output_elems, concurrency_limit=None)
+    arg_save_btn.click(engine.runner.save_args, input_elems, output_elems, concurrency_limit=None, api_name="save-config")
     arg_load_btn.click(
-        engine.runner.load_args, [lang, config_path], list(input_elems) + [output_box], concurrency_limit=None
+        engine.runner.load_args, [lang, config_path], list(input_elems) + [output_box], concurrency_limit=None, api_name='load-config'
     )
 
     dataset.focus(list_datasets, [dataset_dir, training_stage], [dataset], queue=False)

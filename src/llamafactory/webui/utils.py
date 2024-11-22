@@ -22,12 +22,12 @@ import psutil
 from transformers.trainer_utils import get_last_checkpoint
 from yaml import safe_dump, safe_load
 
+from .common import DEFAULT_CACHE_DIR, DEFAULT_CONFIG_DIR, get_save_dir
+from .locales import ALERTS
 from ..extras.constants import PEFT_METHODS, RUNNING_LOG, TRAINER_LOG, TRAINING_ARGS, TRAINING_STAGES
 from ..extras.packages import is_gradio_available, is_matplotlib_available
 from ..extras.ploting import gen_loss_plot
 from ..model import QuantizationMethod
-from .common import DEFAULT_CACHE_DIR, DEFAULT_CONFIG_DIR, get_save_dir
-from .locales import ALERTS
 
 
 if is_gradio_available():
@@ -146,9 +146,14 @@ def get_eval_results(path: os.PathLike) -> str:
 
 def get_time() -> str:
     r"""
-    Gets current date and time.
+    获取当前时区的当前日期时间, 格式为: 2020-01-01-08-00-00
     """
     return datetime.now().strftime(r"%Y-%m-%d-%H-%M-%S")
+
+
+def get_cur_datetime() -> str:
+    """获取当前时区的当前日期时间, 格式为: 2020-01-01 08:00:00"""
+    return datetime.now().strftime(r"%Y-%m-%d %H:%M:%S")
 
 
 def get_trainer_info(output_path: os.PathLike, do_train: bool) -> Tuple[str, "gr.Slider", Optional["gr.Plot"]]:

@@ -10,6 +10,7 @@ einops
 sentencepiece
 tiktoken
 protobuf
+httpx
 uvicorn
 pydantic
 fastapi

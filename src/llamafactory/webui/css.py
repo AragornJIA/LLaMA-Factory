@@ -13,6 +13,10 @@
 # limitations under the License.
 
 CSS = r"""
+h1 {
+  line-height: 3;
+}
+
 .duplicate-button {
   margin: auto !important;
   color: white !important;

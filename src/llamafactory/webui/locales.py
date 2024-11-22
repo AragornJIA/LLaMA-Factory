@@ -1917,13 +1917,13 @@ LOCALES = {
     },
     "export_btn": {
         "en": {
-            "value": "Export",
+            "value": "Export & Deploy",
         },
         "ru": {
             "value": "Экспорт",
         },
         "zh": {
-            "value": "开始导出",
+            "value": "导出 & 部署",
         },
         "ko": {
             "value": "내보내기",
@@ -2101,4 +2101,16 @@ ALERTS = {
         "zh": "模型导出完成。",
         "ko": "모델이 내보내졌습니다.",
     },
+    "info_deploying": {
+        "en": "Deploying model...",
+        "ru": "Экспорт модели...",
+        "zh": "正在部署模型……",
+        "ko": "모델 내보내기 중...",
+    },
+    "info_deployed": {
+        "en": "Model deployed.",
+        "ru": "Модель экспортирована.",
+        "zh": "模型完成部署。",
+        "ko": "모델이 내보내졌습니다.",
+    }
 }

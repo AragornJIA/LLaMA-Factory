@@ -36,8 +36,8 @@ def create_ui(demo_mode: bool = False) -> "gr.Blocks":
     engine = Engine(demo_mode=demo_mode, pure_chat=False)
 
     with gr.Blocks(title="LLaMA Board", css=CSS) as demo:
+        gr.HTML("<h1 style='font-size:50px'><center>网络情报专题模型训练系统</center></h1>")
         if demo_mode:
-            gr.HTML("<h1><center>LLaMA Board: A One-stop Web UI for Getting Started with LLaMA Factory</center></h1>")
             gr.HTML(
                 '<h3><center>Visit <a href="https://github.com/hiyouga/LLaMA-Factory" target="_blank">'
                 "LLaMA Factory</a> for details.</center></h3>"
@@ -47,17 +47,17 @@ def create_ui(demo_mode: bool = False) -> "gr.Blocks":
         engine.manager.add_elems("top", create_top())
         lang: "gr.Dropdown" = engine.manager.get_elem_by_id("top.lang")
 
-        with gr.Tab("Train"):
+        with gr.Tab("训练"):
             engine.manager.add_elems("train", create_train_tab(engine))
 
-        with gr.Tab("Evaluate & Predict"):
+        with gr.Tab("评估 & 预测"):
             engine.manager.add_elems("eval", create_eval_tab(engine))
 
-        with gr.Tab("Chat"):
+        with gr.Tab("对话"):
             engine.manager.add_elems("infer", create_infer_tab(engine))
 
         if not demo_mode:
-            with gr.Tab("Export"):
+            with gr.Tab("导出"):
                 engine.manager.add_elems("export", create_export_tab(engine))
 
         demo.load(engine.resume, outputs=engine.manager.get_elem_list(), concurrency_limit=None)
@@ -96,3 +96,4 @@ def run_web_demo() -> None:
     gradio_share = os.getenv("GRADIO_SHARE", "0").lower() in ["true", "1"]
     server_name = os.getenv("GRADIO_SERVER_NAME", "[::]" if gradio_ipv6 else "0.0.0.0")
     create_web_demo().queue().launch(share=gradio_share, server_name=server_name, inbrowser=True)
+

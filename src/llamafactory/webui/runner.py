@@ -13,29 +13,33 @@
 # limitations under the License.
 
 import json
+import datetime as dt
 import os
 from copy import deepcopy
 from subprocess import Popen, TimeoutExpired
 from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 
 from transformers.trainer import TRAINING_ARGS_NAME
+from transformers.trainer_utils import get_last_checkpoint
 
 from ..extras.constants import LLAMABOARD_CONFIG, PEFT_METHODS, TRAINING_STAGES
 from ..extras.misc import is_gpu_or_npu_available, torch_gc
 from ..extras.packages import is_gradio_available, is_transformers_version_equal_to_4_46
+from ..extras.logging import get_logger
 from .common import DEFAULT_CACHE_DIR, DEFAULT_CONFIG_DIR, QUANTIZATION_BITS, get_save_dir, load_config
 from .locales import ALERTS, LOCALES
-from .utils import abort_process, gen_cmd, get_eval_results, get_trainer_info, load_args, save_args, save_cmd
-
+from .utils import abort_process, gen_cmd, get_eval_results, get_trainer_info, load_args, save_args, save_cmd, get_cur_datetime
+from ..api.task_api import TaskApi
 
 if is_gradio_available():
     import gradio as gr
-
 
 if TYPE_CHECKING:
     from gradio.components import Component
 
     from .manager import Manager
+
+logger = get_logger(__name__)
 
 
 class Runner:
@@ -49,11 +53,16 @@ class Runner:
         """ State """
         self.aborted = False
         self.running = False
+        """存储训练参数"""
+        self.train_args = dict()
 
     def set_abort(self) -> None:
         self.aborted = True
         if self.trainer is not None:
             abort_process(self.trainer.pid)
+        self.train_args['train.status'] = 2
+        TaskApi.update_train_task(
+            {"id": self.train_args.get("task_id"), "trainingStatus": self.train_args['train.status']})
 
     def _initialize(self, data: Dict["Component", Any], do_train: bool, from_preview: bool) -> str:
         get = lambda elem_id: data[self.manager.get_elem_by_id(elem_id)]
@@ -114,7 +123,7 @@ class Runner:
         args = dict(
             stage=TRAINING_STAGES[get("train.training_stage")],
             do_train=True,
-            model_name_or_path=get("top.model_path"),
+            model_name_or_path=user_config.get("base_models_dir") + get("top.model_path"),
             cache_dir=user_config.get("cache_dir", None),
             preprocessing_num_workers=16,
             finetuning_type=finetuning_type,
@@ -249,7 +258,7 @@ class Runner:
 
         args = dict(
             stage="sft",
-            model_name_or_path=get("top.model_path"),
+            model_name_or_path=user_config.get("base_models_dir") + get("top.model_path"),
             cache_dir=user_config.get("cache_dir", None),
             preprocessing_num_workers=16,
             finetuning_type=finetuning_type,
@@ -311,8 +320,15 @@ class Runner:
             self.do_train, self.running_data = do_train, data
             args = self._parse_train_args(data) if do_train else self._parse_eval_args(data)
 
+            self.train_args = self._form_config_dict(data)
+            self.save_args(data)
+
+            self.train_args['train.create_time'] = get_cur_datetime()
+            self.train_args['train.status'] = 1
+            task_id = TaskApi.add_train_task(self.train_args)
+            self.train_args['task_id'] = task_id
             os.makedirs(args["output_dir"], exist_ok=True)
-            save_args(os.path.join(args["output_dir"], LLAMABOARD_CONFIG), self._form_config_dict(data))
+            save_args(os.path.join(str(args["output_dir"]), LLAMABOARD_CONFIG), self.train_args)
 
             env = deepcopy(os.environ)
             env["LLAMABOARD_ENABLED"] = "1"
@@ -323,9 +339,20 @@ class Runner:
             self.trainer = Popen(["llamafactory-cli", "train", save_cmd(args)], env=env)
             yield from self.monitor()
 
+            last_checkpoint_folder = get_last_checkpoint(args["output_dir"])
+            if last_checkpoint_folder:
+                self.train_args['train.finish_time'] = get_cur_datetime()
+                self.train_args['train.status'] = 4
+                save_args(os.path.join(str(last_checkpoint_folder), LLAMABOARD_CONFIG), self.train_args)
+                TaskApi.update_train_task(
+                    {"id": task_id, "trainingStatus": 4, "finishTime": self.train_args['train.finish_time']})
+            else:
+                if self.train_args['train.status'] == 1:
+                    TaskApi.update_train_task({"id": task_id, "trainingStatus": 3})
+
     def _form_config_dict(self, data: Dict["Component", Any]) -> Dict[str, Any]:
         config_dict = {}
-        skip_ids = ["top.lang", "top.model_path", "train.output_dir", "train.config_path"]
+        skip_ids = ["top.lang", "train.config_path"]
         for elem, value in data.items():
             elem_id = self.manager.get_id_by_elem(elem)
             if elem_id not in skip_ids:
@@ -412,6 +439,7 @@ class Runner:
         save_path = os.path.join(DEFAULT_CONFIG_DIR, config_path)
 
         save_args(save_path, self._form_config_dict(data))
+        logger.info(f"save_args: save_path: {save_path}")
         return {output_box: ALERTS["info_config_saved"][lang] + save_path}
 
     def load_args(self, lang: str, config_path: str):

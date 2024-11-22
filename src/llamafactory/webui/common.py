@@ -104,7 +104,7 @@ def get_model_path(model_name: str) -> str:
     """
     user_config = load_config()
     path_dict: Dict["DownloadSource", str] = SUPPORTED_MODELS.get(model_name, defaultdict(str))
-    model_path = user_config["path_dict"].get(model_name, "") or path_dict.get(DownloadSource.DEFAULT, "")
+    model_path = path_dict.get(DownloadSource.DEFAULT, "") or user_config["path_dict"].get(model_name, "")
     if (
         use_modelscope()
         and path_dict.get(DownloadSource.MODELSCOPE)

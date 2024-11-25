@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 import os
 
 from ..extras.packages import is_gradio_available
@@ -32,6 +32,21 @@ if is_gradio_available():
     import gradio as gr
 
 
+def get_url_params(url_params):
+    os.environ['URL_PARAMS'] = json.dumps(url_params)
+    print("get_url_params", json.loads(os.environ.get('URL_PARAMS')))
+    return url_params
+
+
+get_window_url_params = """
+    function(url_params) {
+        console.log(url_params);
+        const params = new URLSearchParams(window.location.search);
+        url_params = Object.fromEntries(params);
+        return url_params;
+        }
+    """
+
 def create_ui(demo_mode: bool = False) -> "gr.Blocks":
     engine = Engine(demo_mode=demo_mode, pure_chat=False)
 
@@ -46,6 +61,9 @@ def create_ui(demo_mode: bool = False) -> "gr.Blocks":
 
         engine.manager.add_elems("top", create_top())
         lang: "gr.Dropdown" = engine.manager.get_elem_by_id("top.lang")
+
+        url_params = gr.JSON({}, visible=False, label="URL Params")
+        demo.load(get_url_params, inputs=url_params, outputs=url_params, js=get_window_url_params)
 
         with gr.Tab("训练"):
             engine.manager.add_elems("train", create_train_tab(engine))

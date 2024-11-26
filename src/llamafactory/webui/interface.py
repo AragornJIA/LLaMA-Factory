@@ -13,6 +13,7 @@
 # limitations under the License.
 import json
 import os
+import logging
 
 from ..extras.packages import is_gradio_available
 from .common import save_config
@@ -27,14 +28,15 @@ from .components import (
 from .css import CSS
 from .engine import Engine
 
-
 if is_gradio_available():
     import gradio as gr
 
+logger = logging.getLogger(__name__)
+
 
 def get_url_params(url_params):
-    os.environ['URL_PARAMS'] = json.dumps(url_params)
-    print("get_url_params", json.loads(os.environ.get('URL_PARAMS')))
+    os.environ['URL_PARAMS'] = json.dumps(url_params, ensure_ascii=False)
+    logger.info(f"url_params: {os.environ.get('URL_PARAMS')}", )
     return url_params
 
 
@@ -46,6 +48,7 @@ get_window_url_params = """
         return url_params;
         }
     """
+
 
 def create_ui(demo_mode: bool = False) -> "gr.Blocks":
     engine = Engine(demo_mode=demo_mode, pure_chat=False)
@@ -114,4 +117,3 @@ def run_web_demo() -> None:
     gradio_share = os.getenv("GRADIO_SHARE", "0").lower() in ["true", "1"]
     server_name = os.getenv("GRADIO_SERVER_NAME", "[::]" if gradio_ipv6 else "0.0.0.0")
     create_web_demo().queue().launch(share=gradio_share, server_name=server_name, inbrowser=True)
-

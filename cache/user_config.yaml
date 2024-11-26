@@ -1,4 +1,5 @@
 base_host_url: http://8.152.0.253:8001
 base_models_dir: ../base_llm_models/
-trained_models_dir: ../trained_llm_models/
+lang: zh
 token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiYXZhdGFyIjoiIiwiZW1haWwiOiJhZG1pbiIsInBhc3N3b3JkIjoiIiwiaXNWYWxpZCI6dHJ1ZSwiY3JlYXRlZEF0IjpudWxsLCJ1cGRhdGVkQXQiOm51bGwsImlzVHJhbnNsYXRlIjpmYWxzZSwibmlja25hbWUiOiIiLCJwaG9uZSI6IiIsImFkZHJlc3MiOiIiLCJlbmRUaW1lIjpudWxsfQ.hLymq2U4bdAXT2-RjHKXpHOYh4sasYxzjcpaa9ufTm0
+trained_models_dir: ../trained_llm_models/

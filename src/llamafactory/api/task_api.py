@@ -19,8 +19,12 @@ class TaskApi:
     @classmethod
     def get_url_params(cls) -> Dict:
         token_value = user_config.get("token")
-        url_params = json.loads(os.environ.get("URL_PARAMS", f'{"token":{token_value}}'))
-        print(f"url_params: {url_params}")
+        url_params_str = os.environ.get('URL_PARAMS')
+        if url_params_str:
+            url_params = json.loads(url_params_str)
+        else:
+            url_params = {"token": token_value}
+        logger.info(f"url_params: {url_params}")
         return url_params
 
     @classmethod

@@ -34,7 +34,7 @@ if is_gradio_available():
 
 def get_url_params(url_params):
     os.environ['URL_PARAMS'] = json.dumps(url_params)
-    print("get_url_params", json.loads(os.environ.get('URL_PARAMS')))
+    print("url_params", json.loads(os.environ.get('URL_PARAMS')))
     return url_params
 
 

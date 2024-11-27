@@ -16,6 +16,8 @@ import json
 import os
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
+from llamafactory.webui.common import DEFAULT_DATA_DIR
+
 from ...extras.constants import DATA_CONFIG
 from ...extras.packages import is_gradio_available
 
@@ -41,7 +43,7 @@ def next_page(page_index: int, total_num: int) -> int:
 
 def can_preview(dataset_dir: str, dataset: list) -> "gr.Button":
     try:
-        with open(os.path.join(dataset_dir, DATA_CONFIG), encoding="utf-8") as f:
+        with open(os.path.join(DEFAULT_DATA_DIR, DATA_CONFIG), encoding="utf-8") as f:
             dataset_info = json.load(f)
     except Exception:
         return gr.Button(interactive=False)
@@ -67,7 +69,7 @@ def _load_data_file(file_path: str) -> List[Any]:
 
 
 def get_preview(dataset_dir: str, dataset: list, page_index: int) -> Tuple[int, list, "gr.Column"]:
-    with open(os.path.join(dataset_dir, DATA_CONFIG), encoding="utf-8") as f:
+    with open(os.path.join(DEFAULT_DATA_DIR, DATA_CONFIG), encoding="utf-8") as f:
         dataset_info = json.load(f)
 
     data_path = os.path.join(dataset_dir, dataset_info[dataset[0]]["file_name"])

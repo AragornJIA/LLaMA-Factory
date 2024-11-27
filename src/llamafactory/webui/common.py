@@ -15,7 +15,8 @@
 import json
 import os
 from collections import defaultdict
-from typing import Any, Dict, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple, Sequence
 
 from yaml import safe_dump, safe_load
 
@@ -34,13 +35,10 @@ from ..extras.constants import (
 from ..extras.misc import use_modelscope, use_openmind
 from ..extras.packages import is_gradio_available
 
-
 if is_gradio_available():
     import gradio as gr
 
-
 logger = logging.get_logger(__name__)
-
 
 DEFAULT_CACHE_DIR = "cache"
 DEFAULT_CONFIG_DIR = "config"
@@ -176,10 +174,10 @@ def load_dataset_info(dataset_dir: str) -> Dict[str, Dict[str, Any]]:
         return {}
 
     try:
-        with open(os.path.join(dataset_dir, DATA_CONFIG), encoding="utf-8") as f:
+        with open(os.path.join(DEFAULT_DATA_DIR, DATA_CONFIG), encoding="utf-8") as f:
             return json.load(f)
     except Exception as err:
-        logger.warning_rank0(f"Cannot open {os.path.join(dataset_dir, DATA_CONFIG)} due to {str(err)}.")
+        logger.warning_rank0(f"Cannot open {os.path.join(DEFAULT_DATA_DIR, DATA_CONFIG)} due to {str(err)}.")
         return {}
 
 
@@ -188,6 +186,44 @@ def list_datasets(dataset_dir: str = None, training_stage: str = list(TRAINING_S
     Lists all available datasets in the dataset dir for the training stage.
     """
     dataset_info = load_dataset_info(dataset_dir if dataset_dir is not None else DEFAULT_DATA_DIR)
-    ranking = TRAINING_STAGES[training_stage] in STAGES_USE_PAIR_DATA
-    datasets = [k for k, v in dataset_info.items() if v.get("ranking", False) == ranking]
+    dataset_dir = Path(dataset_dir)
+    datasets = [file.name for file in dataset_dir.iterdir() if file.is_file()]
+
+    dataset_info = update_dataset_info(dataset_info, datasets, training_stage)
+    with open(os.path.join(DEFAULT_DATA_DIR, DATA_CONFIG), "w", encoding="utf-8") as f:
+        json.dump(dataset_info, f, ensure_ascii=False, indent=2)
+
     return gr.Dropdown(choices=datasets)
+
+
+def update_dataset_info(dataset_info: Dict, datasets: Sequence[str], training_stage: str) -> Dict:
+    for dataset in datasets:
+        if training_stage == "Supervised Fine-Tuning":
+            dataset_meta = add_sft_dataset_meta(dataset)
+        # TODO: Pre-Training 和其他类型的训练数据集暂时都按照 Pre-Training 处理
+        else:
+            dataset_meta = add_pt_dataset_meta(dataset)
+        dataset_info.update(dataset_meta)
+
+    return dataset_info
+
+
+def add_pt_dataset_meta(dataset: str) -> Dict:
+    dataset_meta = {
+        dataset: {
+            "file_name": dataset,
+            "columns": {
+                "prompt": "text"
+            }
+        }
+    }
+    return dataset_meta
+
+
+def add_sft_dataset_meta(dataset: str) -> Dict:
+    dataset_meta = {
+        dataset: {
+            "file_name": dataset
+        }
+    }
+    return dataset_meta

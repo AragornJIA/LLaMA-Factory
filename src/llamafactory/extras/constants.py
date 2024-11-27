@@ -71,12 +71,12 @@ TRAINER_LOG = "trainer_log.jsonl"
 TRAINING_ARGS = "training_args.yaml"
 
 TRAINING_STAGES = {
+    "Pre-Training": "pt",
     "Supervised Fine-Tuning": "sft",
     "Reward Modeling": "rm",
     "PPO": "ppo",
     "DPO": "dpo",
     "KTO": "kto",
-    "Pre-Training": "pt",
 }
 
 STAGES_USE_PAIR_DATA = {"rm", "dpo"}

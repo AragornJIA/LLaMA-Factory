@@ -17,6 +17,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Literal, Optional, Sequence
 
+from llamafactory.webui.common import DEFAULT_DATA_DIR
 from transformers.utils import cached_file
 
 from ..extras.constants import DATA_CONFIG
@@ -84,7 +85,7 @@ def get_dataset_list(dataset_names: Optional[Sequence[str]], dataset_dir: str) -
         if dataset_dir.startswith("REMOTE:"):
             config_path = cached_file(path_or_repo_id=dataset_dir[7:], filename=DATA_CONFIG, repo_type="dataset")
         else:
-            config_path = os.path.join(dataset_dir, DATA_CONFIG)
+            config_path = os.path.join(DEFAULT_DATA_DIR, DATA_CONFIG)
 
         try:
             with open(config_path) as f:

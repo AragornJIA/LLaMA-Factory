@@ -551,36 +551,6 @@
       "prompt": "text"
     }
   },
-  "新闻": {
-    "file_name": "新闻.txt",
-    "columns": {
-      "prompt": "text"
-    }
-  },
-  "特朗普遇刺": {
-    "file_name": "特朗普遇刺.txt",
-    "columns": {
-      "prompt": "text"
-    }
-  },
-  "雷军": {
-    "file_name": "雷军.txt",
-    "columns": {
-      "prompt": "text"
-    }
-  },
-  "news": {
-    "file_name": "/home/ai/Documents/llm/training-data/news_0726.txt",
-    "columns": {
-      "prompt": "text"
-    }
-  },
-  "news-piece": {
-    "file_name": "/home/ai/Documents/llm/training-data/news_piece.txt",
-    "columns": {
-      "prompt": "text"
-    }
-  },
   "crime_words_pt": {
     "file_name": "crime_words.txt",
     "columns": {

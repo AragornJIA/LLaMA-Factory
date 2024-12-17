@@ -1349,6 +1349,26 @@ LOCALES = {
             "info": "비율-BAdam의 업데이트 비율.",
         },
     },
+    "distribution_tab": {
+        "en": {"label": "Distribution Training Setting"},
+        "zh": {"label": "分布式训练设置"},
+    },
+    "distribution_method": {
+        "en": {"label": "Distribution Method"},
+        "zh": {"label": "分布式方案"}
+    },
+    "nodes_info": {
+        "en": {"label": "Cluster Devices Info"},
+        "zh": {"label": "集群节点信息"}
+    },
+    "main_node": {
+        "en": {"label": "Main Node"},
+        "zh": {"label": "主节点"},
+    },
+    "main_node_port": {
+        "en": {"label": "Main Node Port"},
+        "zh": {"label": "主节点开放端口"},
+    },
     "cmd_preview_btn": {
         "en": {
             "value": "Preview command",
@@ -1930,7 +1950,6 @@ LOCALES = {
         },
     },
 }
-
 
 ALERTS = {
     "err_conflict": {

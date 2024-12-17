@@ -16,17 +16,15 @@ from typing import TYPE_CHECKING, Dict
 
 from transformers.trainer_utils import SchedulerType
 
+from .data import create_preview_box
+from ..common import DEFAULT_DATA_DIR, list_checkpoints, list_datasets
+from ..utils import change_stage, list_config_paths, list_output_dirs
 from ...extras.constants import TRAINING_STAGES
 from ...extras.misc import get_device_count
 from ...extras.packages import is_gradio_available
-from ..common import DEFAULT_DATA_DIR, list_checkpoints, list_datasets
-from ..utils import change_stage, list_config_paths, list_output_dirs
-from .data import create_preview_box
-
 
 if is_gradio_available():
     import gradio as gr
-
 
 if TYPE_CHECKING:
     from gradio.components import Component
@@ -270,6 +268,24 @@ def create_train_tab(engine: "Engine") -> Dict[str, "Component"]:
         )
     )
 
+    # 设置分布式训练参数
+    with (gr.Accordion(open=True) as distribution_tab):
+        with gr.Row():
+            distribution_method = gr.Dropdown(choices=["none", "DDP", "FSDP"], value="none")
+            # 训练节点集群，通过 ssh 连接
+            nodes_info = gr.Textbox(scale=2, lines=2, placeholder="user@host_ip\n每行一个节点, 第一行是主节点")
+            main_node_port = gr.Textbox(value="29500")  # 主节点与从节点的通讯端口
+
+        input_elems.update({distribution_method, nodes_info, main_node_port})
+        elem_dict.update(
+            dict(
+                distribution_tab=distribution_tab,
+                distribution_method=distribution_method,
+                nodes_info=nodes_info,
+                main_node_port=main_node_port,
+            )
+        )
+
     with gr.Row():
         cmd_preview_btn = gr.Button()
         arg_save_btn = gr.Button()
@@ -330,9 +346,9 @@ def create_train_tab(engine: "Engine") -> Dict[str, "Component"]:
     model_name: "gr.Dropdown" = engine.manager.get_elem_by_id("top.model_name")
     finetuning_type: "gr.Dropdown" = engine.manager.get_elem_by_id("top.finetuning_type")
 
-    arg_save_btn.click(engine.runner.save_args, input_elems, output_elems, concurrency_limit=None, api_name="save-config")
+    arg_save_btn.click(engine.runner.save_args, input_elems, output_elems, concurrency_limit=None)
     arg_load_btn.click(
-        engine.runner.load_args, [lang, config_path], list(input_elems) + [output_box], concurrency_limit=None, api_name='load-config'
+        engine.runner.load_args, [lang, config_path], list(input_elems) + [output_box], concurrency_limit=None
     )
 
     dataset.focus(list_datasets, [dataset_dir, training_stage], [dataset], queue=False)

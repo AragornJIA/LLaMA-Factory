@@ -29,7 +29,6 @@ from ..extras.packages import is_gradio_available, is_matplotlib_available
 from ..extras.ploting import gen_loss_plot
 from ..model import QuantizationMethod
 
-
 if is_gradio_available():
     import gradio as gr
 
@@ -133,6 +132,21 @@ def save_cmd(args: Dict[str, Any]) -> str:
         safe_dump(clean_cmd(args), f)
 
     return os.path.join(output_dir, TRAINING_ARGS)
+
+
+def convert_dict_to_env(args: Dict[str, Any]) -> str:
+    """将字典类型转换成 key1=value key2=value2 的结构"""
+    env_value = ""
+    for key, value in args.items():
+        env_value += f"{key}={value}"
+    return env_value
+
+
+def convert_dict_to_args(args_dict: Dict[str, Any]) -> str:
+    args = ""
+    for key, value in args_dict.items():
+        args += f" --{key} {value}"
+    return args
 
 
 def get_eval_results(path: os.PathLike) -> str:

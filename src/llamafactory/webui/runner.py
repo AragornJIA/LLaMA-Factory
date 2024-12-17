@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import json
-import datetime as dt
 import os
 from copy import deepcopy
+from os import _Environ
 from subprocess import Popen, TimeoutExpired
 from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
 
@@ -28,7 +28,8 @@ from ..extras.packages import is_gradio_available, is_transformers_version_equal
 from ..extras.logging import get_logger
 from .common import DEFAULT_CACHE_DIR, DEFAULT_CONFIG_DIR, QUANTIZATION_BITS, get_save_dir, load_config
 from .locales import ALERTS, LOCALES
-from .utils import abort_process, gen_cmd, get_eval_results, get_trainer_info, load_args, save_args, save_cmd, get_cur_datetime
+from .utils import abort_process, gen_cmd, get_eval_results, get_trainer_info, load_args, save_args, save_cmd, \
+    get_cur_datetime, convert_dict_to_env, convert_dict_to_args, clean_cmd
 from ..api.task_api import TaskApi
 
 if is_gradio_available():
@@ -114,6 +115,28 @@ class Runner:
         self.running_data = None
         torch_gc()
         return finish_info
+
+    def _parse_train_pre_args(self, data: Dict["Component", Any]) -> Dict[str, Any]:
+        """用于解析 llamafactory-cli train 命令前面的环境变量"""
+        get = lambda elem_id: data[self.manager.get_elem_by_id(elem_id)]
+        if get("train.distribution_method") != "none":
+            nodes_info = get("train.nodes_info").splitlines()
+            nnodes = len(nodes_info)
+            master_info = nodes_info[0]
+            master_addr = master_info.split("@")[-1]
+        else:
+            nnodes = 1
+            master_addr = "localhost"
+            nodes_info = list()
+
+        pre_args = {
+            "FORCE_TORCHRUN": 1,
+            "NNODES": nnodes,
+            "MASTER_ADDR": master_addr,
+            "MASTER_PORT": int(get("train.main_node_port")),
+            "nodes_info": nodes_info,
+        }
+        return pre_args
 
     def _parse_train_args(self, data: Dict["Component", Any]) -> Dict[str, Any]:
         get = lambda elem_id: data[self.manager.get_elem_by_id(elem_id)]
@@ -249,6 +272,11 @@ class Runner:
             ds_offload = "offload_" if get("train.ds_offload") else ""
             args["deepspeed"] = os.path.join(DEFAULT_CACHE_DIR, f"ds_z{ds_stage}_{ds_offload}config.json")
 
+        # FSDP 分布式设置
+        if get("train.distribution_method") == "FSDP":
+            args["fsdp"] = "full_shard"
+        logger.info(f"training_args: {args}")
+
         return args
 
     def _parse_eval_args(self, data: Dict["Component", Any]) -> Dict[str, Any]:
@@ -319,6 +347,7 @@ class Runner:
         else:
             self.do_train, self.running_data = do_train, data
             args = self._parse_train_args(data) if do_train else self._parse_eval_args(data)
+            pre_args = self._parse_train_pre_args(data)
 
             self.train_args = self._form_config_dict(data)
             self.save_args(data)
@@ -336,7 +365,8 @@ class Runner:
             if args.get("deepspeed", None) is not None:
                 env["FORCE_TORCHRUN"] = "1"
 
-            self.trainer = Popen(["llamafactory-cli", "train", save_cmd(args)], env=env)
+            # self.trainer = Popen(["llamafactory-cli", "train", save_cmd(args)], env=env)
+            self.start_train(env, pre_args, args)
             yield from self.monitor()
 
             last_checkpoint_folder = get_last_checkpoint(args["output_dir"])
@@ -349,6 +379,28 @@ class Runner:
             else:
                 if self.train_args['train.status'] == 1:
                     TaskApi.update_train_task({"id": task_id, "trainingStatus": 3})
+
+    def start_train(self, env: _Environ[str], pre_args: Dict, args: Dict):
+        python_path = "cd ~/projects/llama_factory && bash ~/pyenvs/llm_env/bin/activate && "
+        suf_args = convert_dict_to_args(clean_cmd(args))
+
+        nodes_info = pre_args.pop("nodes_info", list())
+
+        pre_args['NODE_RANK'] = 0
+        pre_env = convert_dict_to_env(pre_args)
+
+        cmd = " ".join([python_path, pre_env, "llamafactory-cli train", suf_args])
+        logger.info(f"master_node: {cmd}")
+        self.trainer = Popen(cmd, env=env, shell=True)
+
+        if len(nodes_info) > 0:
+            for node_rank, node_info in enumerate(nodes_info[1:]):
+                pre_args['NODE_RANK'] = node_rank
+                pre_env = convert_dict_to_env(pre_args)
+                cmd = f"ssh {node_info} '{python_path} {pre_env} llamafactory-cli train suf_args'"
+                logger.info(f"slave_node: {cmd}")
+                Popen(cmd, env=env, shell=True)
+
 
     def _form_config_dict(self, data: Dict["Component", Any]) -> Dict[str, Any]:
         config_dict = {}

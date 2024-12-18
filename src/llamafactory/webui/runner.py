@@ -381,23 +381,21 @@ class Runner:
                     TaskApi.update_train_task({"id": task_id, "trainingStatus": 3})
 
     def start_train(self, env: _Environ[str], pre_args: Dict, args: Dict):
-        python_path = "cd ~/projects/llama_factory && bash ~/pyenvs/llm_env/bin/activate && "
-        suf_args = convert_dict_to_args(clean_cmd(args))
-
         nodes_info = pre_args.pop("nodes_info", list())
-
         pre_args['NODE_RANK'] = 0
         pre_env = convert_dict_to_env(pre_args)
-
+        suf_args = convert_dict_to_args(clean_cmd(args))
+        python_path = "cd ~/projects/llama_factory && "
         cmd = " ".join([python_path, pre_env, "llamafactory-cli train", suf_args])
         logger.info(f"master_node: {cmd}")
         self.trainer = Popen(cmd, env=env, shell=True)
 
         if len(nodes_info) > 0:
+            python_path = "cd ~/projects/llama_factory && source ~/pyenvs/llm_env/bin/activate && "
             for node_rank, node_info in enumerate(nodes_info[1:]):
-                pre_args['NODE_RANK'] = node_rank
+                pre_args['NODE_RANK'] = node_rank + 1
                 pre_env = convert_dict_to_env(pre_args)
-                cmd = f"ssh {node_info} '{python_path} {pre_env} llamafactory-cli train suf_args'"
+                cmd = f"ssh {node_info} '{python_path} {pre_env} llamafactory-cli train {suf_args}'"
                 logger.info(f"slave_node: {cmd}")
                 Popen(cmd, env=env, shell=True)
 

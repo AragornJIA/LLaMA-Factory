@@ -19,6 +19,8 @@ class TaskApi:
     @classmethod
     def get_url_params(cls) -> Dict:
         url_params = json.loads(os.environ.get("URL_PARAMS"))
+        if url_params == dict():
+            url_params = user_config.get("url_params")
         logger.info(f"url_params: {url_params}")
         return url_params
 

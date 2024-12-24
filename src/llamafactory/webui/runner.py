@@ -14,23 +14,25 @@
 
 import json
 import os
+import subprocess
 from copy import deepcopy
 from os import _Environ
+from pathlib import Path
 from subprocess import Popen, TimeoutExpired
-from typing import TYPE_CHECKING, Any, Dict, Generator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Generator, Optional, Iterable
 
 from transformers.trainer import TRAINING_ARGS_NAME
 from transformers.trainer_utils import get_last_checkpoint
 
-from ..extras.constants import LLAMABOARD_CONFIG, PEFT_METHODS, TRAINING_STAGES
-from ..extras.misc import is_gpu_or_npu_available, torch_gc
-from ..extras.packages import is_gradio_available, is_transformers_version_equal_to_4_46
-from ..extras.logging import get_logger
 from .common import DEFAULT_CACHE_DIR, DEFAULT_CONFIG_DIR, QUANTIZATION_BITS, get_save_dir, load_config
 from .locales import ALERTS, LOCALES
-from .utils import abort_process, gen_cmd, get_eval_results, get_trainer_info, load_args, save_args, save_cmd, \
-    get_cur_datetime, convert_dict_to_env, convert_dict_to_args, clean_cmd
+from .utils import abort_process, gen_cmd, get_eval_results, get_trainer_info, load_args, save_args, get_cur_datetime, \
+    convert_dict_to_env, convert_dict_to_args, clean_cmd
 from ..api.task_api import TaskApi
+from ..extras.constants import LLAMABOARD_CONFIG, PEFT_METHODS, TRAINING_STAGES
+from ..extras.logging import get_logger
+from ..extras.misc import is_gpu_or_npu_available, torch_gc
+from ..extras.packages import is_gradio_available, is_transformers_version_equal_to_4_46
 
 if is_gradio_available():
     import gradio as gr
@@ -365,7 +367,6 @@ class Runner:
             if args.get("deepspeed", None) is not None:
                 env["FORCE_TORCHRUN"] = "1"
 
-            # self.trainer = Popen(["llamafactory-cli", "train", save_cmd(args)], env=env)
             self.start_train(env, pre_args, args)
             yield from self.monitor()
 
@@ -382,15 +383,32 @@ class Runner:
 
     def start_train(self, env: _Environ[str], pre_args: Dict, args: Dict):
         nodes_info = pre_args.pop("nodes_info", list())
+        suf_args = convert_dict_to_args(clean_cmd(args))
+
+        # 如果是集群训练，就先将项目文件、dataset_info.json、训练数据 由主节点同步至从节点
+        logger.info(f"args: {args}")
+        if len(nodes_info) > 0:
+            file_path_list = [
+                args["model_name_or_path"],
+                "data/dataset_info.json",
+                args["dataset_dir"],
+                args['output_dir'],
+            ]
+            if args.get("adapter_name_or_path"):
+                file_path_list.append(args["adapter_name_or_path"])
+
+            self.rsync_files(file_path_list, nodes_info[1:])
+
+        # 在主节点执行训练命令
         pre_args['NODE_RANK'] = 0
         pre_env = convert_dict_to_env(pre_args)
-        suf_args = convert_dict_to_args(clean_cmd(args))
         python_path = "cd ~/projects/llama_factory && "
         cmd = " ".join([python_path, pre_env, "llamafactory-cli train", suf_args])
         logger.info(f"master_node: {cmd}")
         self.trainer = Popen(cmd, env=env, shell=True)
 
         if len(nodes_info) > 0:
+            # 在各个从节点执行训练命令
             python_path = "cd ~/projects/llama_factory && source ~/pyenvs/llm_env/bin/activate && "
             for node_rank, node_info in enumerate(nodes_info[1:]):
                 pre_args['NODE_RANK'] = node_rank + 1
@@ -399,6 +417,15 @@ class Runner:
                 logger.info(f"slave_node: {cmd}")
                 Popen(cmd, env=env, shell=True)
 
+    def rsync_files(self, file_path_list: Iterable[str], nodes_info: Iterable[str]):
+        """将主节点上的文件同步至从节点上的相同路径"""
+        for file_path in file_path_list:
+            file_path = Path(file_path).resolve()
+            for node_info in nodes_info:
+                cmd = (f"ssh {node_info} 'mkdir {file_path.parent} -p' "
+                       f"&& rsync -avz --progress --ignore-existing {file_path} {node_info}:{file_path.parent}")
+                logger.info(f"rsync_files: {cmd}")
+                self.trainer = subprocess.run(cmd, shell=True, check=True)
 
     def _form_config_dict(self, data: Dict["Component", Any]) -> Dict[str, Any]:
         config_dict = {}

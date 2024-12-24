@@ -300,7 +300,7 @@ def create_train_tab(engine: "Engine") -> Dict[str, "Component"]:
                 output_dir = gr.Dropdown(allow_custom_value=True)
                 config_path = gr.Dropdown(allow_custom_value=True)
 
-            with gr.Row():
+            with gr.Row(visible=False):
                 device_count = gr.Textbox(value=str(get_device_count() or 1), interactive=False)
                 ds_stage = gr.Dropdown(choices=["none", "2", "3"], value="none")
                 ds_offload = gr.Checkbox()
